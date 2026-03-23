@@ -476,14 +476,14 @@
     // Участок 2-1 (Резистор R1 = 2.4 кОм)
     (r: 2.4, phi: 8.95,   label: [1], anchor: "south", r-label: $R_1$),
     // Участок 1-5 (Источник E2 = 30 В, идем против направления ЭДС, скачок вниз)
-    (r: 2.4, phi: -21.30, label: [5], anchor: "north-west", e-label: move(dy: 1.5em, $E_2$)),
+    (r: 2.4, phi: -21.30, label: [5], anchor: "north", e-label: move(dy: 1.5em, $E_2$)),
     // Участок 5-4 (Резистор R2 = 2.0 кОм -> 2.4 + 2.0 = 4.4)
     (r: 4.4, phi: -11.72, label: [4], anchor: "north", r-label: $R_2$),
     // Участок 4-6 (Резистор R4 = 1.0 кОм -> 4.4 + 1.0 = 5.4)
-    (r: 5.4, phi: -11.72, label: [6], anchor: "north-east", r-label: $R_4$),
+    (r: 5.4, phi: -11.72, label: [6], anchor: "north", r-label: $R_4$),
     // Участок 6-3 (Источник E4 = 15 В, идем против направления ЭДС, скачок вверх)
-    (r: 5.4, phi: 4.44,   label: [3], anchor: "south-east", e-label: move(dy: 2em, $E_4$)),
+    (r: 5.4, phi: 4.44,   label: [3], anchor: "south", e-label: move(dy: 2em, $E_4$)),
     // Участок 3-2 (Резистор R5 = 3.9 кОм -> 5.4 + 3.9 = 9.3)
-    (r: 8, phi: 0,      label: [2], anchor: "south-west", r-label: $R_5$),
+    (r: 8, phi: 0,      label: [2], anchor: "south", r-label: $R_5$),
   ))
 )
