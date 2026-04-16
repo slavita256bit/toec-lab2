@@ -1,5 +1,5 @@
 #import "@preview/modern-g7-32:0.2.0": *
-#import "@local/typst-bsuir-core:0.7.9": *
+#import "@local/typst-bsuir-core:1.5.0": *
 #import "@preview/zap:0.5.0"
 
 #set text(font: "Times New Roman", size: 14pt)
@@ -38,24 +38,6 @@
   R4: 1.0, R5: 3.9, R6: 2.4,
   base-node: 3
 )
-
-#let ground-better(node-name, length: 0.8, spacing: 0.2, stroke: 1pt) = {
-  import zap: cetz, wire
-  cetz.draw.get-ctx(ctx => {
-      let (ctx, pos) = cetz.coordinate.resolve(ctx, node-name)
-      let (x, y, z) = pos
-
-      wire(pos, (x, y - 0.5)) // Провод вниз от узла
-
-      let start_x = x - length / 2
-      let end_x = x + length / 2
-      let base_y = y - 0.5
-
-      cetz.draw.line((start_x, base_y), (end_x, base_y), stroke: stroke)
-      cetz.draw.line((start_x + spacing, base_y - spacing), (end_x - spacing, base_y - spacing), stroke: stroke)
-      cetz.draw.line((start_x + 2*spacing, base_y - 2*spacing), (end_x - 2*spacing, base_y - 2*spacing), stroke: stroke)
-  })
-}
 
 = Цель работы
 Экспериментальная проверка метода узловых потенциалов, метода двух узлов (как частного случая метода узловых потенциалов), метода эквивалентного генератора напряжения.
@@ -201,6 +183,7 @@
 #lab-figure(
   caption: [Схема для определения напряжения холостого хода],
   above: -2em,
+  gap: -1em,
   circuit-better(scale-factor: 80%, {
     import zap: *
 
@@ -225,16 +208,13 @@
     resistor-better("R4", "4", "6", label: (content: $R_4$, anchor: "top", distance: 0.6))
     source-better("E4", "6", "3", position: 30%, arrow-dir: "forward", label: (content: $E_4$, anchor: "bottom"))
 
-    // Стрелка напряжения холостого хода U_xx (от узла 1 к 3)
-    cetz.draw.line(
-      (0, -1.8), (16, -1.8),
-      stroke: 0.8pt + black,
-      mark: (end: ">", fill: black)
-    )
-    cetz.draw.content(
-      (8, -1.8),
-      box(fill: white, inset: 2pt)[$U_"хх"$],
-      anchor: "south"
+    // Разрыв для измерения напряжения холостого хода U_xx (между узлами 1 и 3)
+    open-branch-better(
+      "Uxx_terminals", "1", "3",
+      label: $U_"хх"$,
+      arrow-side: "bottom",
+      arrow-dir: "forward",
+      show-terminals: true
     )
   })
 )
@@ -252,49 +232,41 @@
 #let phi3_xx = V.E4 - I45 * V.R4
 #let Uxx = phi1_xx - phi3_xx
 
-После удаления сопротивления $R_3$ узлы 1 и 3 перестают быть точками разветвления (к ним подключено лишь по два элемента). Схема сводится к двум узлам (2 и 4), между которыми параллельно включены три ветви (левая, средняя и правая). Применим метод двух узлов.
+После удаления сопротивления $R_3$ схема сводится к двум узлам, между которыми параллельно включены три ветви. Применим метод двух узлов.
 
-Определим проводимости параллельных ветвей:
-#mathtype-mimic[
-  $g_12 &= 1 / (R_1 + R_2) = 1 / (#V.R1 + #V.R2) = #g12 " мСм";$
-
-  $g_45 &= 1 / (R_4 + R_5) = 1 / (#V.R4 + #V.R5) = #g45 " мСм";$
-
-  $g_6 &= 1 / R_6 = 1 / #V.R6 = #g6 " мСм".$
-]
-
-Найдём межузловое напряжение $U_24$:
-#mathtype-mimic(receive: true,[
+Определим межузловое напряжение $U_24$:
+#mathtype-mimic(receive: false, [
   $
-  U_24 = (E_2 g_12 + E_4 g_45) / (g_12 + g_6 + g_45) = (#V.E2 dot #g12 + #V.E4 dot #g45) / (#g12 + #g6 + #g45) = #U24 " В".
+  U_24 = (E_2 / (R_1 + R_2) + E_4 / (R_4 + R_5)) / (1 / (R_1 + R_2) + 1 / R_6 + 1 / (R_4 + R_5))
+       = (#V.E2 / (#V.R1 + #V.R2) + #V.E4 / (#V.R4 + #V.R5)) / (1 / (#V.R1 + #V.R2) + 1 / #V.R6 + 1 / (#V.R4 + #V.R5))
+       = #U24 " В".
   $
 ])
 
 Определим токи $I_12$ (в левой ветви) и $I_45$ (в правой ветви), текущие от узла 4 к узлу 2:
 #mathtype-mimic[
-  $
-  I_12 &= (E_2 - U_24) g_12 = (#V.E2 - #U24) dot #g12 = #I12 " мА"; \
-  I_45 &= (E_4 - U_24) g_45 = (#V.E4 - #U24) dot #g45 = #I45 " мА".
-  $
+  $ I_12 &= (E_2 - U_24) / (R_1 + R_2) = (#V.E2 - #U24) / (#V.R1 + #V.R2) = #I12 " мА"; $
+  $ I_45 &= (E_4 - U_24) / (R_4 + R_5) = (#V.E4 - #U24) / (#V.R4 + #V.R5) = #I45 " мА". $
 ]
 
 Пройдя по контурам от 4-го узла к 1-му и 3-му, определим их потенциалы:
 #mathtype-mimic[
-  $phi_1 &= E_2 - I_12 R_2 = #V.E2 - #I12 dot #V.R2 = #phi1_xx " В";$
+  $U_41 &= E_2 - I_12 R_2 = #V.E2 - #I12 dot #V.R2 = #phi1_xx " В";$
 
-  $phi_3 &= E_4 - I_45 R_4 = #V.E4 - #I45 dot #V.R4 = #phi3_xx " В".$
+  $U_43 &= E_4 - I_45 R_4 = #V.E4 - #I45 dot #V.R4 = #phi3_xx " В".$
 ]
 
-Находим напряжение холостого хода.
-#mathtype-mimic(receive: true,[
-  $ U_"хх" = phi_1 - phi_3 = #phi1_xx - (#phi3_xx) = #Uxx " В". $
+Определим напряжение холостого хода:
+#mathtype-mimic(receive: false,[
+  $ U_"хх" = U_41 - U_43 = #phi1_xx - (#phi3_xx) = #Uxx " В". $
 ])
 
-Для нахождения внутреннего сопротивления эквивалентного генератора $R_"вн"$ исключим из схемы источники ЭДС (заменив их короткозамкнутыми участками) и рассчитаем эквивалентное сопротивление относительно зажимов 1 и 3. Полученная схема представлена на рисунке 3.
+Для нахождения внутреннего сопротивления эквивалентного генератора $R_"вн"$ исключим из схемы источники ЭДС заменив их короткозамкнутыми участками и рассчитаем эквивалентное сопротивление относительно зажимов 1 и 3. Полученная схема представлена на рисунке 3.
 
 #lab-figure(
   caption: [Схема для определения внутреннего сопротивления],
   above: 0em,
+  gap: -1em,
   circuit-better(scale-factor: 80%, {
     import zap: *
 
@@ -316,6 +288,14 @@
 
     // Ветвь 4-3 (с E4, теперь R4)
     resistor-better("R4", "4", "3", label: (content: $R_4$, anchor: "top", distance: 0.6))
+
+    // Разрыв для измерения внутреннего сопротивления R_вн (между узлами 1 и 3)
+    open-branch-better(
+      "R_vn_terminals", "1", "3",
+      label: $R_"вн"$,
+      arrow-side: "bottom",
+      show-terminals: true
+    )
   })
 )
 
@@ -341,6 +321,7 @@
 #lab-figure(
   caption:[Схема после эквивалентного преобразования треугольника в звезду],
   above: -2em,
+  gap: -1em,
   circuit-better(scale-factor: 80%, {
     import zap: *
 
@@ -357,112 +338,96 @@
     resistor-better("R46", "4", "O", label: (content: $R_46$, anchor: "bottom", distance: 0.7))
     resistor-better("R45", "O", "3", label: (content: $R_45$, anchor: "top", distance: 0.9))
 
-    cetz.draw.line((0, -1.8), (16, -1.8), stroke: 0.8pt + black)
-    cetz.draw.content((8, -1.8), box(fill: white, inset: 2pt)[$R_"вн"$], anchor: "south")
+    // Разрыв для измерения внутреннего сопротивления R_вн (между узлами 1 и 3)
+    open-branch-better(
+      "R_vn_terminals", "1", "3",
+      label: $R_"вн"$,
+      arrow-side: "bottom",
+      show-terminals: true
+    )
   })
 )
 
-Найдём внутреннее сопротивление.
-#mathtype-mimic(receive: true,[
-  $ R_"вн" &= ((R_1 + R_56)(R_2 + R_46)) / (R_1 + R_56 + R_2 + R_46) + R_45
-           &= ((#V.R1 + #R56)(#V.R2 + #R46)) / (#V.R1 + #R56 + #V.R2 + #R46) + #R45 = #Rbh " кОм". $
+Определим внутреннее сопротивление:
+#mathtype-mimic(receive: false,[
+  $ R_"вн" &= ((R_1 + R_56)(R_2 + R_46)) / (R_1 + R_56 + R_2 + R_46) + R_45 = $
+  $ &= ((#V.R1 + #R56)(#V.R2 + #R46)) / (#V.R1 + #R56 + #V.R2 + #R46) + #R45 = #Rbh " кОм". $
 ])
 
-Определим искомый ток в ветви с сопротивлением нагрузки $R_3$.
-#mathtype-mimic(receive: true,[
+Определим искомый ток в ветви с сопротивлением нагрузки $R_3$:
+#mathtype-mimic(receive: false,[
   $ I_3 = U_"хх" / (R_"вн" + R_3) = #Uxx / (#Rbh + #V.R3) = #(Uxx / (Rbh + V.R3)) " мА". $
 ])
 
 Значение тока $I_3$, рассчитанное методом эквивалентного генератора, полностью совпадает со значением, полученным ранее методом узловых потенциалов.
 
+#pagebreak()
 
-#heading("Сводные таблицы результатов", numbering: none)
+#heading("Таблицы результатов", numbering: none)
 
-// Этот блок перехватывает округление чисел в таблицах до 3 знаков (и обходит пакет typst-bsuir-core)
-#let apply-3-decimals(body) = {
-  show table.cell: cell => {
-    let format-val3(it) = {
-      let val = float(it.text.replace(",", "."))
-      let rounded = calc.round(val, digits: 3)
-      let str-val = str(rounded).replace(".", ",")
-      let parts = str-val.split(",")
-      let fractional = if parts.len() == 1 { "000" }
-                       else if parts.at(1).len() == 1 { parts.at(1) + "00" }
-                       else if parts.at(1).len() == 2 { parts.at(1) + "0" }
-                       else { parts.at(1) }
-      // sym.wj добавляется, чтобы спрятать число от глобального regex (защищает 3 знака от урезания до 2)
-      parts.at(0) + "," + sym.wj + fractional
-    }
-    show regex("[0-9]+[\.,][0-9]+"): format-val3
-    cell
-  }
-  body
-}
-
-// Применяем 3 знака и устанавливаем уменьшенный шрифт для компактности
-#apply-3-decimals[
-  #let s(body) = text(size: 10pt)[#body]
-
-  // Новая функция для 2-х знаков после запятой (для экспериментальных данных)
-  #let s2(v) = {
-    if type(v) in (float, int) {
-      let rounded = calc.round(float(v), digits: 2)
-      let str-val = str(rounded).replace(".", ",")
-      let parts = str-val.split(",")
-      let fractional = if parts.len() == 1 { "00" }
-                       else if parts.at(1).len() == 1 { parts.at(1) + "0" }
-                       else { parts.at(1) }
-
-      // Добавляем sym.wj после запятой, чтобы "спрятать" это число от правила 3-х знаков
-      text(size: 10pt)[#parts.at(0),#sym.wj#fractional]
-    } else {
-      text(size: 10pt)[#v]
-    }
-  }
-
-  #figure(
-    caption:[Результаты расчётов и измерений],
-    table(
-      columns: (6em, 2em, 2em, 2em, 2.2em, 2.5em, 2em, 2em, 2em, 2em, 2.2em, 2em, 2em, 2em, 2em),
-      align: center + horizon,
-      table.header(
-        table.cell(rowspan: 2)[Данные],
-        table.cell(rowspan: 2)[$E_2$],
-        table.cell(rowspan: 2)[$E_4$],
-        table.cell(colspan: 9)[Метод узловых напряжений],
-        table.cell(colspan: 3)[Метод двух узлов],
-        [$U_13$,\ В], [$U_23$,\ В], [$U_43$,\ В],
-        [$I_1$,\ мА], [$I_2$,\ мА], [$I_3$,\ мА], [$I_4$,\ мА], [$I_5$,\ мА], [$I_6$,\ мА],
-        [$U_24$,\ В], [$I_12$,\ мА], [$I_45$,\ мА]
-      ),
-      [Расчетные], s(V.E2), s(V.E4),
-      s(U13), s(U23), s(U43),
-      s(I1), s(I2), s(I3), s(I4), s(I5), s(I6),
-      s(U24), s(I12), s(I45),
-
-      // Пример использования s2 для экспериментальных данных
-      [Эксперимент.], [#s2(29.9)], [#s2(16.07)], [#s2(4.47)], [#s2(-4.44)], [#s2(-16.11)], [#s2(3.6)], [#s2(4.85)], [#s2(1.16)], [#s2(-0.14)], [#s2(-1.1)], [#s2(4.7)], [#s2(11.72)], [#s2(4.1)], [#s2(0.8)]
+#figure(
+  caption: [Результаты расчётов и измерений],
+  table(
+    columns: (auto, auto, auto, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
+    align: center + horizon,
+    table.header(
+      table.cell(rowspan: 2)[Данные],
+      table.cell(rowspan: 2)[$E_2$],
+      table.cell(rowspan: 2)[$E_4$],
+      table.cell(colspan: 9)[Метод узловых напряжений],
+      table.cell(colspan: 3)[Метод двух узлов],
+      ..rotate-cells(
+        [$U_13$, В], [$U_23$, В], [$U_43$, В],
+        [$I_1$, мА], [$I_2$, мА], [$I_3$, мА], [$I_4$, мА], [$I_5$, мА], [$I_6$, мА],
+        [$U_24$, В], [$I_12$, мА], [$I_45$, мА]
+      )
+    ),
+    [Расчетные],
+    ..rotate-cells(..format-cells(
+      V.E2, V.E4,
+      U13, U23, U43,
+      I1, I2, I3, I4, I5, I6,
+      U24, I12, I45,
+      dec: 3, size: 14pt
+    )),
+    [Эксперимент.],
+    ..rotate-cells(
+      29.9, 16.07,
+      4.47, -4.44, -16.11,
+      3.6, 4.85, 1.16, -0.14, -1.1, 4.7,
+      11.72, 4.1, 0.8,
+      dec: 2, size: 14pt
     )
   )
+)
 
-  #v(1em)
+#v(1em)
 
-  #figure(
-    caption:[Продолжение таблицы 2.2],
-    table(
-      columns: (auto, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
-      align: center + horizon,
-      table.header(
-        table.cell(rowspan: 2)[Данные],
-        table.cell(colspan: 4)[Метод экв. генератора],
-        table.cell(rowspan: 2, colspan: 6)[#par(justify: false,[Опытные данные для построения потенциальной диаграммы – напряжения участков цепи, В])],
-        [$U_"хх"$,\ В], [$I_"к.з"$,\ мА], [$R_"вн"$,\ кОм], [$I_"н"$,\ мА]
-      ),
-      [Расчетные], s(Uxx), [/*3.74*/], s(Rbh), s(Uxx / (Rbh + V.R3)), table.cell(colspan: 6)[2-1-5-4-6-3-2],
-      [Эксперимент.], [#s2(6.87)], [#s2(3.3)], [#s2(2.08)], [#s2(1.15)], [#s2(8.55)], [#s2(-21.3)], [#s2(-11.72)], [#s2(-11.72)], [#s2(4.44)], [#s2(0)],
+#figure(
+  caption: [Продолжение таблицы 2.2],
+  table(
+    columns: (auto, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
+    align: center + horizon,
+    table.header(
+      table.cell(rowspan: 2)[Данные],
+      table.cell(colspan: 4)[Метод экв. генератора],
+      table.cell(rowspan: 2, colspan: 6)[#par(justify: false, [Опытные данные для построения потенциальной диаграммы – напряжения участков цепи, В])],
+      ..rotate-cells(
+        [$U_"хх"$, В], [$I_"к.з"$, мА], [$R_"вн"$, кОм], [$I_"н"$, мА]
+      )
+    ),
+    [Расчетные],
+    // Пустые скобки [] передадут в ячейку пустоту вместо закомментированного /*3.74*/
+    ..format-cells(Uxx, [], Rbh, Uxx / (Rbh + V.R3), dec: 3, size: 12pt),
+    table.cell(colspan: 6)[2-1-5-4-6-3-2],
+    [Эксперимент.],
+    ..format-cells(
+      6.87, 3.3, 2.08, 1.15,
+      8.55, -21.3, -11.72, -11.72, 4.44, 0,
+      dec: 2, size: 12pt
     )
   )
-]
+)
 
 #heading(numbering: none)[Вывод]
 В ходе выполнения лабораторной работы были исследованы методы узловых потенциалов, двух узлов и эквивалентного генератора. Выполненные теоретические расчёты были проверены экспериментально. Для заданного внешнего контура была построена потенциальная диаграмма.
@@ -487,3 +452,5 @@
     (r: 8, phi: 0,      label: [2], anchor: "south", r-label: $R_5$),
   ))
 )
+
+//todo мб новая система схем? чтобы одну и ту же схему не переделывать сильно, а делать только изменения
